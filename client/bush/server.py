@@ -2,7 +2,8 @@ import os
 import uuid
 import sqlite3
 import os.path
-import datetime
+
+import arrow
 
 from flask import Flask, request, redirect, send_file
 from flask_restful import Resource, Api, abort
@@ -58,7 +59,7 @@ class File(Resource):
         db[tag] = {
             'name': f.filename,
             'path': path,
-            'date': datetime.datetime.now()
+            'date': arrow.now()
             }
 
         return {}, 201
