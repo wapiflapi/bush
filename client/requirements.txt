@@ -3,3 +3,6 @@ pyyaml
 appdirs
 progressbar2
 requests-toolbelt
+flask
+flask-restful
+flask-shelve

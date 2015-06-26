@@ -22,20 +22,18 @@ EXTREME = 4
 
 class BushFile():
 
-    def __init__(self, tag, name, date=0, compressed=None, url=None, **kwargs):
-
-        if compressed is None:
-            compressed = name.endswith('.tar.gz')
+    def __init__(self, tag, name, date=0, url=None, **kwargs):
+        if name.endswith('.tar.gz'):
+            name = name[:-7]
 
         self.tag = tag
-        self.compressed = compressed
-        self.name = name[:-7] if self.compressed else name
+        self.name = name
         self.date = arrow.get(date)
         self.url = url
 
     def __repr__(self):
-        return "BushFile(tag=%s, name=%s, date=%s, compressed=%s)" % (
-            self.tag, self.name, self.data, self.compressed)
+        return "BushFile(tag=%s, name=%s, date=%s, url=%s)" % (
+            self.tag, self.name, self.data, self.url)
 
     def output(self, file=sys.stdout, align=0, extended=False):
         if not extended:
@@ -74,8 +72,9 @@ class BushAPI():
         if level > INFO:
             raise RuntimeError(msg)
 
-    def url(self, url):
-        return urllib.parse.urljoin(self.base, url)
+    def url(self, path, *args):
+        args = (urllib.parse.quote(arg, safe='') for arg in args)
+        return urllib.parse.urljoin(self.base, path.format(*args))
 
     def tag_for_path(self, filepath):
         basename = os.path.basename(filepath)
@@ -124,10 +123,9 @@ class BushAPI():
         return True
 
     def list(self):
-        r = self.requests.get(self.url("index.php?request=list"))
+        r = self.requests.get(self.url("/files/"))
         self.assert_response(r)
-        return [BushFile(url=self.getddl(f['tag']), **f)
-                for f in json.loads(r.text)]
+        return [BushFile(k, **v) for k, v in r.json().items()]
 
     def upload(self, filepath, tag=None, callback=None):
 
@@ -142,7 +140,6 @@ class BushAPI():
             raise ValueError("Must specify tag for multifile.")
 
         tag = tag or self.tag_for_path(filepaths[0])
-
         tmp = tempfile.TemporaryFile()
         tar = tarfile.open("bush_upload.tar.gz", "w:gz", fileobj=tmp)
 
@@ -158,7 +155,6 @@ class BushAPI():
 
         filename = "%s.tar.gz" % ", ".join(basenames)
         encoder = MultipartEncoder(fields={
-            'tag': tag,
             'file': (filename, tmp, 'application/octet-stream')
         })
 
@@ -172,8 +168,7 @@ class BushAPI():
             _callback = None
 
         monitor = MultipartEncoderMonitor(encoder, _callback)
-
-        r = self.requests.post(self.url('index.php?request=upload'), data=monitor,
+        r = self.requests.put(self.url('/files/{}', tag), data=monitor,
                           headers={'Content-Type': monitor.content_type})
 
         if _callback:
@@ -187,12 +182,11 @@ class BushAPI():
 
     def getddl(self, tag):
         tag = urllib.parse.quote(tag)
-        return self.url("index.php?request=get&tag=%s" % tag)
+        return self.url("/files/{}", tag)
 
     def download(self, tag, dest, callback=None, chunksz=8192):
 
-        r = self.requests.get(self.url("index.php?request=get"),
-                         params={"tag": tag}, stream=True)
+        r = self.requests.get(self.url("/files/{}", tag), stream=True)
 
         self.assert_response(r)
 
@@ -301,8 +295,7 @@ class BushAPI():
 
     def delete(self, tag):
 
-        r = self.requests.get(self.url("index.php?request=delete"),
-                         params={"tag": tag})
+        r = self.requests.delete(self.url("/files/{}", tag))
 
         self.assert_response(r)
         data = r.json()
@@ -310,7 +303,7 @@ class BushAPI():
 
     def reset(self):
 
-        r = self.requests.get(self.url("index.php?request=reset"))
+        r = self.requests.delete(self.url("/files/"))
 
         self.assert_response(r)
 

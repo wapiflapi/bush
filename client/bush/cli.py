@@ -14,7 +14,6 @@ import arrow
 import bush.api
 import bush.config
 
-
 class ShowProgress():
 
     def __init__(self, total):
@@ -106,6 +105,12 @@ def do_reset(api, args):
     api.reset()
 
 
+def do_serve(api, args):
+
+    from bush.server import app
+    app.run(debug=True)
+
+
 def main():
 
     parser = argparse.ArgumentParser(description="Simplistic file sharing. ",
@@ -148,6 +153,9 @@ def main():
 
     sub = subs.add_parser('reset', help="delete all files")
     sub.set_defaults(callback=do_reset)
+
+    sub = subs.add_parser('serve', help="act as a bush server")
+    sub.set_defaults(callback=do_serve)
 
     parser.add_argument('-u', '--url', help="API endpoint")
     parser.add_argument('-U', '--username', help="API username")
