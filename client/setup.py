@@ -5,7 +5,7 @@ import sys
 
 if sys.version_info < (3, 3, 0):
     from datetime import datetime
-    sys.stdout.write("It's %d. This requires Python > 3.3.\n"
+    sys.stdout.write("It's %d. This requires Python >= 3.3.\n"
                      % datetime.now().year)
     sys.exit(1)
 

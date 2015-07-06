@@ -1,15 +1,13 @@
 import os
 import sys
-import time
-import pprint
 import argparse
-import progressbar
 import datetime
-import operator
+import contextlib
 
 from distutils import util
 
 import arrow
+import progressbar
 
 import bush.api
 import bush.config
@@ -47,6 +45,15 @@ class UIAPI(bush.api.BushAPI):
             status = False
 
         return status
+
+@contextlib.contextmanager
+def user_friendly_errors(exceptions=Exception, debug=False):
+    try:
+        yield
+    except KeyboardInterrupt:
+        print('interrupted', file=sys.stderr)
+    except () if debug else exceptions as e:
+        exit(e)
 
 
 def do_list(api, args):
@@ -106,9 +113,8 @@ def do_reset(api, args):
 
 
 def do_serve(api, args):
-
     from bush.server import app
-    app.run(debug=True)
+    app.run(host=api.base.hostname, port=api.base.port, debug=args.debug)
 
 
 def main():
@@ -169,6 +175,9 @@ def main():
 
     config = bush.config.load_config(args.config)
 
+    if args.callback is do_serve and args.url is None:
+        args.url = 'local'
+
     servers = config.get('servers') or [{}]
 
     for server in servers:
@@ -190,11 +199,7 @@ you are doing. But if something fails you might want to try to add one.""",
 
     username = args.username or server.get('username')
     password = args.password or server.get('password')
+    api = UIAPI(url, username=username, password=password)
 
-    try:
-        api = UIAPI(url, username=username, password=password)
+    with user_friendly_errors(debug=args.debug):
         args.callback(api, args)
-    except KeyboardInterrupt:
-        print('interrupted')  # Canceled by user :(
-    except Exception if not args.debug else () as e:
-        exit(e)

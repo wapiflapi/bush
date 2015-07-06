@@ -52,7 +52,8 @@ class BushFile():
 class BushAPI():
 
     def __init__(self, base, username=None, password=None):
-        self.base = base
+        self.base_url = base
+        self.base = urllib.parse.urlparse(self.base_url)
 
         self.requests = requests.session()
 
@@ -60,12 +61,12 @@ class BushAPI():
                 'User-Agent': 'bush.py.%s' % bush.meta.__version__,
                 })
 
-        scheme = urllib.parse.urlparse(self.base)[0]
-        if (username or password) and scheme != 'https':
+        if (username or password) and self.base.scheme != 'https':
             if not self.confirmation("Sending credentials over %r is insecure."
-                                     % scheme, level=EXTREME):
+                                     % self.base.scheme, level=EXTREME):
                 raise KeyboardInterrupt()
             self.requests.auth = (username, password)
+
 
     def confirmation(self, msg, level):
         # Don't confirm anything by default!
@@ -74,7 +75,7 @@ class BushAPI():
 
     def url(self, path, *args):
         args = (urllib.parse.quote(arg, safe='') for arg in args)
-        return urllib.parse.urljoin(self.base, path.format(*args))
+        return urllib.parse.urljoin(self.base_url, path.format(*args))
 
     def tag_for_path(self, filepath):
         basename = os.path.basename(filepath)

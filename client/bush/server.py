@@ -1,6 +1,5 @@
 import os
 import uuid
-import sqlite3
 import os.path
 
 import arrow
@@ -23,7 +22,7 @@ class FileList(Resource):
         db = shelve.get_shelve('c')
         return {k: {'name': v['name'],
                     'date': v['date'].isoformat(),
-                    'url': api.url_for(File, tag=k, _external=True)}
+                    'url': api.url_for(File, tag=k)}
                 for k, v in db.items()}
 
     def delete(self):
