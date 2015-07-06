@@ -56,14 +56,14 @@ def user_friendly_errors(exceptions=Exception, debug=False):
         exit(e)
 
 
-def do_list(api, args):
+def do_list(api, args, config):
     files = api.list()
     maxlen = max(len(f.tag) for f in files) if files else 0
     for f in files:
         f.output(align=maxlen, extended=args.exact)
 
 
-def do_wait(api, args):
+def do_wait(api, args, config):
 
     latest = None
     update = arrow.now() - datetime.timedelta(seconds=args.age)
@@ -84,7 +84,7 @@ def do_wait(api, args):
     api.download(latest.tag, args.dest, callback=ShowProgress)
 
 
-def do_upload(api, args):
+def do_upload(api, args, config):
 
     if args.tag is not None:
         tag = args.tag
@@ -100,21 +100,22 @@ def do_upload(api, args):
     api.upload(args.file, tag=tag, callback=ShowProgress)
 
 
-def do_download(api, args):
+def do_download(api, args, config):
     api.download(args.tag, args.dest, callback=ShowProgress)
 
 
-def do_delete(api, args):
+def do_delete(api, args, config):
     api.delete(args.tag)
 
 
-def do_reset(api, args):
+def do_reset(api, args, config):
     api.reset()
 
 
-def do_serve(api, args):
-    from bush.server import app
-    app.run(host=api.base.hostname, port=api.base.port, debug=args.debug)
+def do_serve(api, args, config):
+    from bush import server
+    server.config_datadir(args.datadir or config.get('datadir', './data/'))
+    server.app.run(host=api.base.hostname, port=api.base.port, debug=args.debug)
 
 
 def main():
@@ -162,6 +163,8 @@ def main():
 
     sub = subs.add_parser('serve', help="act as a bush server")
     sub.set_defaults(callback=do_serve)
+    sub.add_argument('-d', '--datadir',
+                     help="path do the directory used for storing files")
 
     parser.add_argument('-u', '--url', help="API endpoint")
     parser.add_argument('-U', '--username', help="API username")
@@ -202,4 +205,4 @@ you are doing. But if something fails you might want to try to add one.""",
     api = UIAPI(url, username=username, password=password)
 
     with user_friendly_errors(debug=args.debug):
-        args.callback(api, args)
+        args.callback(api, args, server)

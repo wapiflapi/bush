@@ -10,8 +10,13 @@ from flask.ext import shelve
 
 app = Flask(__name__)
 
-app.config['UPLOAD_FOLDER'] = os.path.realpath('./data/')
-app.config['SHELVE_FILENAME'] = os.path.realpath('./data/files.db')
+def config_datadir(datadir):
+    app.config.update(
+        UPLOAD_FOLDER=os.path.realpath(datadir),
+        SHELVE_FILENAME=os.path.realpath(os.path.join(datadir, 'files.db'))
+        )
+
+config_datadir('./data/')
 
 api = Api(app)
 shelve.init_app(app)
@@ -78,7 +83,6 @@ class File(Resource):
 
         return {}, 200
 
-        # TODO: also delete file on FS.
 
 api.add_resource(FileList, '/files/')
 api.add_resource(File, '/files/<string:tag>')
