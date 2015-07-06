@@ -22,9 +22,12 @@ EXTREME = 4
 
 class BushFile():
 
-    def __init__(self, tag, name, date=0, url=None, **kwargs):
+    def __init__(self, tag, name, date=0, url=None, base=None, **kwargs):
         if name.endswith('.tar.gz'):
             name = name[:-7]
+
+        if base is not None:
+            url = urllib.parse.urljoin(base, url)
 
         self.tag = tag
         self.name = name
@@ -126,7 +129,8 @@ class BushAPI():
     def list(self):
         r = self.requests.get(self.url("/files/"))
         self.assert_response(r)
-        return [BushFile(k, **v) for k, v in r.json().items()]
+        return [BushFile(k, base=self.base_url, **v)
+                for k, v in r.json().items()]
 
     def upload(self, filepath, tag=None, callback=None):
 
